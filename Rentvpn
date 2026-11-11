@@ -1,0 +1,38 @@
+name: Build APK
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Unzip source
+        run: |
+          ZIP=$(ls *.zip | head -n 1)
+          echo "Using $ZIP"
+          unzip -oq "$ZIP" -d src
+          PROJ=$(dirname "$(find src -name settings.gradle.kts | head -n 1)")
+          echo "PROJ=$PROJ" >> $GITHUB_ENV
+          echo "Project dir: $PROJ"
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: 8.9
+
+      - name: Build debug APK
+        run: cd "$PROJ" && gradle :app:assembleDebug --stacktrace
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: RENT-VPN-apk
+          path: ${{ env.PROJ }}/app/build/outputs/apk/debug/app-debug.apk
